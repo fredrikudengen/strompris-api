@@ -1,11 +1,15 @@
 import httpx
 from datetime import datetime
-from models import HourlyPrice, DailyPrices
-from datetime import date, timedelta
 
-async def fetch_prices(region: str, date: str) -> DailyPrices:
-    url = f"https://www.hvakosterstrommen.no/api/v1/prices/{date}_{region}.json"
-    print(f"Fetcher: {url}")
+from database import SessionLocal
+from db_models import PowerPrice
+from models import HourlyPrice, DailyPrices
+from datetime import timedelta
+from datetime import date as DateType
+from sqlalchemy.dialects.postgresql import insert
+
+async def fetch_prices(region: str, date: DateType) -> DailyPrices:
+    url = f"https://www.hvakosterstrommen.no/api/v1/prices/{date.strftime("%Y/%m-%d")}_{region}.json"
 
     async with httpx.AsyncClient() as client:
         response = await client.get(url)
@@ -29,11 +33,28 @@ def cheapest(daily_prices: DailyPrices):
 
 async def average(region, days):
     total = 0
-    today = date.today()
+    today = DateType.today()
     for day in range(days):
         yesterday = today - timedelta(days=day)
-        daily_prices = await fetch_prices(region, yesterday.strftime("%Y/%m-%d"))
+        daily_prices = await fetch_prices(region, yesterday)
         total += sum([x.price_nok for x in daily_prices.prices])
-        today = yesterday
 
     return total / days
+
+def save_prices(daily_prices: DailyPrices):
+    region = daily_prices.region
+    date = daily_prices.date
+    prices = daily_prices.prices
+    db = SessionLocal()
+
+    for price in prices:
+        stmt = insert(PowerPrice).values(
+            region=region,
+            date=date,
+            hour=price.hour,
+            price=price.price_nok
+        ).on_conflict_do_nothing()
+        db.execute(stmt)
+
+    db.commit()
+    db.close()

@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import List
+from datetime import date as DateType
 
 class HourlyPrice(BaseModel):
     hour: int
@@ -7,6 +8,6 @@ class HourlyPrice(BaseModel):
 
 class DailyPrices(BaseModel):
     region: str
-    date: str
+    date: DateType
     prices: List[HourlyPrice]
 
