@@ -7,6 +7,7 @@ from models import HourlyPrice, DailyPrices
 from datetime import timedelta
 from datetime import date as DateType
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import func
 
 async def fetch_prices(region: str, date: DateType) -> DailyPrices:
     url = f"https://www.hvakosterstrommen.no/api/v1/prices/{date.strftime("%Y/%m-%d")}_{region}.json"
@@ -27,19 +28,38 @@ async def fetch_prices(region: str, date: DateType) -> DailyPrices:
         prices=prices
     )
 
+def fetch_prices_from_db(region: str) -> float:
+    db = SessionLocal()
+    result = db.query(PowerPrice)\
+            .filter(PowerPrice.region == region)\
+            .filter(PowerPrice.date >= DateType.today())\
+            .all()
+    db.close()
+    return result
+
 def cheapest(daily_prices: DailyPrices):
     prices = daily_prices.prices
     return min(prices, key=lambda x: x.price_nok)
 
-async def average(region, days):
-    total = 0
-    today = DateType.today()
-    for day in range(days):
-        yesterday = today - timedelta(days=day)
-        daily_prices = await fetch_prices(region, yesterday)
-        total += sum([x.price_nok for x in daily_prices.prices])
+def cheapest_from_db(region: str):
+    db = SessionLocal()
+    result = db.query(PowerPrice)\
+            .filter(PowerPrice.region == region)\
+            .filter(PowerPrice.date == DateType.today())\
+            .order_by(PowerPrice.price)\
+            .first()
+    db.close()
+    return result
 
-    return total / days
+def get_average_from_db(region: str, days: int) -> float:
+    db = SessionLocal()
+    cutoff = DateType.today() - timedelta(days=days)
+    result = db.query(func.avg(PowerPrice.price))\
+               .filter(PowerPrice.region == region)\
+               .filter(PowerPrice.date >= cutoff)\
+               .scalar()
+    db.close()
+    return result
 
 def save_prices(daily_prices: DailyPrices):
     region = daily_prices.region

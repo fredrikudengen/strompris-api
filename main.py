@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from prices import cheapest, average
+from prices import cheapest, get_average_from_db, fetch_prices_from_db, cheapest_from_db
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from prices import fetch_prices, save_prices
 from datetime import date
@@ -24,13 +24,21 @@ async def fetch_and_save():
 
 @app.get("/prices/today")
 async def get_today_prices(region: str = "NO5"):
-    return await fetch_prices(region, date.today())
+    prices = fetch_prices_from_db(region)
+    if not prices:
+        return await fetch_prices(region, date.today())
+    else:
+        return prices
 
 @app.get("/prices/cheapest")
 async def get_cheapest_prices(region: str = "NO5"):
-    daily = await fetch_prices(region, date.today())
-    return cheapest(daily)
+    cheapest_price = cheapest_from_db(region)
+    if not cheapest_price:
+        daily = await fetch_prices(region, date.today())
+        return cheapest(daily)
+    else:
+        return cheapest_price
 
 @app.get("/prices/average")
 async def get_average_prices(region: str = "NO5", days: int = 7):
-    return await average(region, days)
+    return get_average_from_db(region, days)
