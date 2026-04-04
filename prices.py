@@ -32,7 +32,7 @@ def fetch_prices_from_db(region: str) -> float:
     db = SessionLocal()
     result = db.query(PowerPrice)\
             .filter(PowerPrice.region == region)\
-            .filter(PowerPrice.date >= DateType.today())\
+            .filter(PowerPrice.date == DateType.today())\
             .all()
     db.close()
     return result
