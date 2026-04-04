@@ -67,7 +67,7 @@ def fetch_prices_from_db(day: DateType, region: str) -> DailyPrices:
         price = item.price
         prices.append(HourlyPrice(hour=hour, price_nok=price))
 
-    return DailyPrices(region=region, date=DateType.today(), prices=prices)
+    return DailyPrices(region=region, date=day, prices=prices)
 
 def cheapest(daily_prices: DailyPrices):
     prices = daily_prices.prices

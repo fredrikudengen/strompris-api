@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres
+    image: postgres:16
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: secret
@@ -16,6 +16,6 @@ services:
     depends_on:
       - db
 volumes:
-  - postgres_data:
-      
+  postgres_data:
+
 

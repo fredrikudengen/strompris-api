@@ -10,7 +10,7 @@ app = FastAPI()
 scheduler = AsyncIOScheduler()
 
 @app.get("/admin/fetch-date")
-async def manual_fetch(from_date: DateType, to_date: DateType):
+async def manual_fetch(from_date: DateType=DateType.today(), to_date: DateType=DateType.today()):
     await fetch_and_save_timeframe(from_date, to_date)
     return {"status": "done"}
 
@@ -37,7 +37,7 @@ async def get_cheapest_price_day(day: DateType=DateType.today(), region: str = "
         return cheapest_price
 
 @app.get("/prices/cheapest-timeframe")
-async def get_cheapest_price_timeframe(from_date: DateType, to_date: DateType, region: str = "NO5"):
+async def get_cheapest_price_timeframe(from_date: DateType=DateType.today(), to_date: DateType=DateType.today(), region: str = "NO5"):
     if from_date == DateType.today():
         await fetch_and_save_day(from_date)
     elif to_date == DateType.today():
