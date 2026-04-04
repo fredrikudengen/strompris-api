@@ -56,8 +56,10 @@ def cheapest_from_db(region: str):
             .order_by(PowerPrice.price)\
             .first()
     db.close()
+    if result:
+        return HourlyPrice(hour=result.hour, price_nok=result.price)
+    return None
 
-    return HourlyPrice(hour=result.hour, price_nok=result.price)
 
 def get_average_from_db(region: str, days: int) -> float:
     db = SessionLocal()
