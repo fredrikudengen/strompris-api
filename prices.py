@@ -28,14 +28,21 @@ async def fetch_prices(region: str, date: DateType) -> DailyPrices:
         prices=prices
     )
 
-def fetch_prices_from_db(region: str) -> float:
+def fetch_prices_from_db(region: str) -> DailyPrices:
     db = SessionLocal()
     result = db.query(PowerPrice)\
             .filter(PowerPrice.region == region)\
             .filter(PowerPrice.date == DateType.today())\
             .all()
     db.close()
-    return result
+
+    prices = []
+    for item in result:
+        hour = item.hour
+        price = item.price
+        prices.append(HourlyPrice(hour=hour, price_nok=price))
+
+    return DailyPrices(region=region, date=DateType.today(), prices=prices)
 
 def cheapest(daily_prices: DailyPrices):
     prices = daily_prices.prices
@@ -49,7 +56,8 @@ def cheapest_from_db(region: str):
             .order_by(PowerPrice.price)\
             .first()
     db.close()
-    return result
+
+    return HourlyPrice(hour=result.hour, price_nok=result.price)
 
 def get_average_from_db(region: str, days: int) -> float:
     db = SessionLocal()
