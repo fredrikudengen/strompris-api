@@ -5,7 +5,7 @@ from fastapi import HTTPException
 
 from database import SessionLocal
 from db_models import PowerPrice
-from models import HourlyPrice, DailyPrices
+from models import HourlyPrice, DailyPrices, MonthlyPrices
 from datetime import timedelta
 from datetime import date as DateType
 from sqlalchemy.dialects.postgresql import insert
@@ -93,6 +93,10 @@ def cheapest(daily_prices: DailyPrices):
     prices = daily_prices.prices
     return min(prices, key=lambda x: x.price_nok)
 
+def most_expensive(daily_prices: DailyPrices):
+    prices = daily_prices.prices
+    return max(prices, key=lambda x: x.price_nok)
+
 async def cheapest_timeframe(from_date: DateType, to_date: DateType, region: str):
     if from_date == DateType.today():
         await fetch_and_save_day(from_date)
@@ -103,7 +107,7 @@ async def cheapest_timeframe(from_date: DateType, to_date: DateType, region: str
     cheapest_day = None
     if from_date <= to_date:
         while from_date <= to_date:
-            new_cheapest = await cheapest_from_db(from_date, region)
+            new_cheapest = await cheapest_date(from_date, region)
             if new_cheapest is None:
                 from_date = from_date + timedelta(days=1)
                 continue
@@ -113,7 +117,7 @@ async def cheapest_timeframe(from_date: DateType, to_date: DateType, region: str
             from_date = from_date + timedelta(days=1)
     else:
         while from_date >= to_date:
-            new_cheapest = await cheapest_from_db(from_date, region)
+            new_cheapest = await cheapest_date(from_date, region)
             if new_cheapest is None:
                 from_date = from_date - timedelta(days=1)
                 continue
@@ -125,7 +129,7 @@ async def cheapest_timeframe(from_date: DateType, to_date: DateType, region: str
         raise HTTPException(status_code=404, detail="Ingen priser funnet for denne perioden")
     return await fetch_prices_from_db(cheapest_day, region)
 
-async def cheapest_from_db(day: DateType, region: str):
+async def cheapest_date(day: DateType, region: str):
     db = SessionLocal()
     result = db.query(PowerPrice)\
             .filter(PowerPrice.region == region)\
@@ -138,6 +142,52 @@ async def cheapest_from_db(day: DateType, region: str):
         return HourlyPrice(hour=result.hour, price_nok=result.price)
     daily = await fetch_prices(day, region)
     return cheapest(daily)
+
+async def most_expensive_date(day: DateType, region: str):
+    db = SessionLocal()
+    result = db.query(PowerPrice)\
+            .filter(PowerPrice.region == region)\
+            .filter(PowerPrice.date == day)\
+            .order_by(PowerPrice.price.desc())\
+            .first()
+    db.close()
+
+    if result:
+        return HourlyPrice(hour=result.hour, price_nok=result.price)
+    daily = await fetch_prices(day, region)
+    return most_expensive(daily)
+
+async def most_expensive_timeframe(from_date: DateType, to_date: DateType, region: str):
+    if from_date == DateType.today():
+        await fetch_and_save_day(from_date)
+    elif to_date == DateType.today():
+        await fetch_and_save_day(to_date)
+
+    most_expensive_so_far = 0.0
+    most_expensive_day = None
+    if from_date <= to_date:
+        while from_date <= to_date:
+            new_most_expensive = await most_expensive_date(from_date, region)
+            if new_most_expensive is None:
+                from_date = from_date + timedelta(days=1)
+                continue
+            if most_expensive_so_far < new_most_expensive.price_nok:
+                most_expensive_so_far = new_most_expensive.price_nok
+                most_expensive_day = from_date
+            from_date = from_date + timedelta(days=1)
+    else:
+        while from_date >= to_date:
+            new_most_expensive = await most_expensive_date(from_date, region)
+            if new_most_expensive is None:
+                from_date = from_date - timedelta(days=1)
+                continue
+            if most_expensive_so_far < new_most_expensive.price_nok:
+                most_expensive_so_far = new_most_expensive.price_nok
+                most_expensive_day = from_date
+            from_date = from_date - timedelta(days=1)
+    if most_expensive_day is None:
+        raise HTTPException(status_code=404, detail="Ingen priser funnet for denne perioden")
+    return await fetch_prices_from_db(most_expensive_day, region)
 
 def get_average_from_db(from_date: DateType, to_date: DateType, region: str) -> float:
     db = SessionLocal()
@@ -166,3 +216,18 @@ def save_prices(daily_prices: DailyPrices):
 
     db.commit()
     db.close()
+
+def get_monthly_averages(region: str):
+    monthly_averages = []
+    db = SessionLocal()
+    result = db.query(
+        func.date_trunc('month', PowerPrice.date).label('month'),
+        func.avg(PowerPrice.price).label('avg_price'))\
+        .filter(PowerPrice.region == region) \
+        .group_by(func.date_trunc('month', PowerPrice.date)) \
+        .order_by(func.date_trunc('month', PowerPrice.date)) \
+        .all()
+
+    for month, avg_price in result:
+        monthly_averages.append(MonthlyPrices(region=region, month=month, price_nok=avg_price))
+    return monthly_averages

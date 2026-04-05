@@ -8,10 +8,11 @@ function DayChart() {
 
     useEffect(() => {
         const fetchPrices = async () => {
-            const response = await fetch(`http://localhost:8000/prices/day?day=${day}&region=${region}`)
+            const response = await fetch(`http://localhost:8000/prices/date?date=${day}&region=${region}`)
             const data = await response.json()
             setPrices(data)
         }
+        setPrices(null)
         fetchPrices()
     }, [day, region])
     if (!prices) return <p>Laster...</p>
@@ -30,7 +31,7 @@ function DayChart() {
                 <option value="NO4">NO4</option>
                 <option value="NO5">NO5</option>
         </select>
-        <p>
+        <div>
             <LineChart width={800} height={400} data={prices.prices}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="hour" />
@@ -38,7 +39,7 @@ function DayChart() {
                 <Tooltip />
                 <Line dataKey="price_nok" />
             </LineChart>
-        </p>
+        </div>
     </div>
   )
 }
