@@ -3,9 +3,9 @@ from datetime import datetime
 
 from fastapi import HTTPException
 
-from database import SessionLocal
-from db_models import PowerPrice
-from models import HourlyPrice, DailyPrices
+from api.database import SessionLocal
+from api.db_models import PowerPrice
+from api.models import HourlyPrice, DailyPrices
 from datetime import timedelta
 from datetime import date as DateType
 from sqlalchemy.dialects.postgresql import insert

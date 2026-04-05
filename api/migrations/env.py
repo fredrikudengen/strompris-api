@@ -5,8 +5,7 @@ from sqlalchemy import pool
 
 from alembic import context
 from dotenv import load_dotenv
-from db_models import PowerPrice
-from database import Base
+from api.database import Base
 
 import os
 
