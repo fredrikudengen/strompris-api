@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, Date, Integer, Numeric
-from api.database import Base
+from database import Base
 
 class PowerPrice(Base):
     __tablename__ = "power_prices"

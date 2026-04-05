@@ -2,13 +2,20 @@ from fastapi import FastAPI
 from prices import cheapest, get_average_from_db, fetch_prices_from_db, cheapest_from_db, fetch_and_save_timeframe, \
     fetch_and_save_day, cheapest_timeframe
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from prices import fetch_prices, save_prices
-from datetime import date as DateType, timedelta
+from prices import fetch_prices
+from datetime import date as DateType
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
 scheduler = AsyncIOScheduler()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 @app.get("/admin/fetch-date")
 async def manual_fetch(from_date: DateType=DateType.today(), to_date: DateType=DateType.today()):
     await fetch_and_save_timeframe(from_date, to_date)
