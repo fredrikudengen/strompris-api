@@ -53,7 +53,23 @@ async def fetch_and_save_day(day=None):
         daily = await fetch_prices(day, region)
         save_prices(daily)
 
-def fetch_prices_from_db(day: DateType, region: str) -> DailyPrices:
+async def get_prices_period(from_date:DateType, to_date:DateType, region):
+    daily_prices = []
+
+    if from_date <= to_date:
+        while from_date <= to_date:
+            daily = await fetch_prices_from_db(from_date, region)
+            daily_prices.append(daily)
+            from_date = from_date + timedelta(days=1)
+    else:
+        while from_date >= to_date:
+            daily = await fetch_prices_from_db(from_date, region)
+            daily_prices.append(daily)
+            from_date = from_date - timedelta(days=1)
+
+    return daily_prices
+
+async def fetch_prices_from_db(day: DateType, region: str) -> DailyPrices:
     db = SessionLocal()
     result = db.query(PowerPrice)\
             .filter(PowerPrice.region == region)\
@@ -62,6 +78,10 @@ def fetch_prices_from_db(day: DateType, region: str) -> DailyPrices:
     db.close()
 
     prices = []
+
+    if not result:
+        return await fetch_prices(day, region)
+
     for item in result:
         hour = item.hour
         price = item.price
@@ -73,12 +93,17 @@ def cheapest(daily_prices: DailyPrices):
     prices = daily_prices.prices
     return min(prices, key=lambda x: x.price_nok)
 
-def cheapest_timeframe(from_date: DateType, to_date: DateType, region: str):
+async def cheapest_timeframe(from_date: DateType, to_date: DateType, region: str):
+    if from_date == DateType.today():
+        await fetch_and_save_day(from_date)
+    elif to_date == DateType.today():
+        await fetch_and_save_day(to_date)
+
     cheapest_so_far = 10000000000.0
     cheapest_day = None
     if from_date <= to_date:
         while from_date <= to_date:
-            new_cheapest = cheapest_from_db(from_date, region)
+            new_cheapest = await cheapest_from_db(from_date, region)
             if new_cheapest is None:
                 from_date = from_date + timedelta(days=1)
                 continue
@@ -88,7 +113,7 @@ def cheapest_timeframe(from_date: DateType, to_date: DateType, region: str):
             from_date = from_date + timedelta(days=1)
     else:
         while from_date >= to_date:
-            new_cheapest = cheapest_from_db(from_date, region)
+            new_cheapest = await cheapest_from_db(from_date, region)
             if new_cheapest is None:
                 from_date = from_date - timedelta(days=1)
                 continue
@@ -98,9 +123,9 @@ def cheapest_timeframe(from_date: DateType, to_date: DateType, region: str):
             from_date = from_date - timedelta(days=1)
     if cheapest_day is None:
         raise HTTPException(status_code=404, detail="Ingen priser funnet for denne perioden")
-    return fetch_prices_from_db(cheapest_day, region)
+    return await fetch_prices_from_db(cheapest_day, region)
 
-def cheapest_from_db(day: DateType, region: str):
+async def cheapest_from_db(day: DateType, region: str):
     db = SessionLocal()
     result = db.query(PowerPrice)\
             .filter(PowerPrice.region == region)\
@@ -108,17 +133,19 @@ def cheapest_from_db(day: DateType, region: str):
             .order_by(PowerPrice.price)\
             .first()
     db.close()
+
     if result:
         return HourlyPrice(hour=result.hour, price_nok=result.price)
-    return None
+    daily = await fetch_prices(day, region)
+    return cheapest(daily)
 
-def get_average_from_db(day: DateType, region: str, days: int) -> float:
+def get_average_from_db(from_date: DateType, to_date: DateType, region: str) -> float:
     db = SessionLocal()
-    cutoff = day - timedelta(days=days)
     result = db.query(func.avg(PowerPrice.price))\
-               .filter(PowerPrice.region == region)\
-               .filter(PowerPrice.date >= cutoff)\
-               .scalar()
+        .filter(PowerPrice.region == region)\
+        .filter(PowerPrice.date >= min(from_date, to_date))\
+        .filter(PowerPrice.date <= max(from_date, to_date))\
+        .scalar()
     db.close()
     return result
 

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from prices import cheapest, get_average_from_db, fetch_prices_from_db, cheapest_from_db, fetch_and_save_timeframe, \
-    fetch_and_save_day, cheapest_timeframe
+    fetch_and_save_day, cheapest_timeframe, get_prices_period
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from prices import fetch_prices
 from datetime import date as DateType
@@ -26,31 +26,22 @@ async def start_scheduler():
     scheduler.add_job(fetch_and_save_day, "cron", hour=14, minute=0)
     scheduler.start()
 
-@app.get("/prices/day")
+@app.get("/prices/date")
 async def get_today_prices(day: DateType=DateType.today(), region: str = "NO5"):
-    prices = fetch_prices_from_db(day, region)
-    if not prices:
-        return await fetch_prices(day, region)
-    else:
-        return prices
+    return await fetch_prices_from_db(day, region)
 
-@app.get("/prices/cheapest-day")
+@app.get("/prices/period")
+async def get_period_prices(from_date: DateType=DateType.today(), to_date: DateType=DateType.today(), region: str = "NO5"):
+    return await get_prices_period(from_date, to_date, region)
+
+@app.get("/prices/cheapest-date")
 async def get_cheapest_price_day(day: DateType=DateType.today(), region: str = "NO5"):
-    cheapest_price = cheapest_from_db(day, region)
-    if not cheapest_price:
-        daily = await fetch_prices(day, region)
-        return cheapest(daily)
-    else:
-        return cheapest_price
+    return await cheapest_from_db(day, region)
 
-@app.get("/prices/cheapest-timeframe")
+@app.get("/prices/cheapest-period")
 async def get_cheapest_price_timeframe(from_date: DateType=DateType.today(), to_date: DateType=DateType.today(), region: str = "NO5"):
-    if from_date == DateType.today():
-        await fetch_and_save_day(from_date)
-    elif to_date == DateType.today():
-        await fetch_and_save_day(to_date)
-    return cheapest_timeframe(from_date, to_date, region)
+    return await cheapest_timeframe(from_date, to_date, region)
 
 @app.get("/prices/average")
-async def get_average_prices(day: DateType = DateType.today(), region: str = "NO5", days: int = 7):
-    return get_average_from_db(day, region, days)
+async def get_average_prices(from_date: DateType = DateType.today(), to_date: DateType=DateType.today(), region: str = "NO5"):
+    return get_average_from_db(from_date, to_date, region)
