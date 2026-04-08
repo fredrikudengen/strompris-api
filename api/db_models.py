@@ -14,3 +14,4 @@ class CachedAnswer(Base):
     question = Column(String, primary_key=True)
     answer = Column(String, primary_key=False)
     created_at = Column(DateTime, primary_key=False)
+    region = Column(String, primary_key=True)

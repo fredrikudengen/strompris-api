@@ -53,7 +53,7 @@ async def fetch_and_save_day(day=None):
         daily = await fetch_prices(day, region)
         save_prices(daily)
 
-async def get_prices_period(from_date:DateType, to_date:DateType, region):
+async def get_prices_timeperiod(from_date:DateType, to_date:DateType, region):
     daily_prices = []
 
     if from_date <= to_date:

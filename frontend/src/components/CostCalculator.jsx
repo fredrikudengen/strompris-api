@@ -64,7 +64,7 @@ function CostCalculator() {
             setApparat(e.target.value)
             setKW(apparater[e.target.value].kW)
             setMinutes(apparater[e.target.value].minutes)
-        }}>
+            }}>
                 <option value="Vaskemaskin">Vaskemaskin</option>
                 <option value="Dusj">Dusj</option>
                 <option value="Stekeovn">Stekeovn</option>

@@ -23,7 +23,8 @@ def upgrade() -> None:
     sa.Column('question', sa.String(), nullable=False),
     sa.Column('answer', sa.String(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.PrimaryKeyConstraint('question')
+    sa.Column('region', sa.String(), nullable=False),
+    sa.PrimaryKeyConstraint('question', 'region'),
     )
 
 def downgrade() -> None:
