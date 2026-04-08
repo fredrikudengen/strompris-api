@@ -1,9 +1,10 @@
 from fastapi import FastAPI
-from prices import cheapest, get_average_from_db, fetch_prices_from_db, cheapest_date, fetch_and_save_timeframe, \
+
+from claude import ask_claude, get_cached_answer, save_answer
+from prices import get_average_from_db, fetch_prices_from_db, cheapest_date, fetch_and_save_timeframe, \
     fetch_and_save_day, cheapest_timeframe, get_prices_period, get_monthly_averages, most_expensive_date, \
     most_expensive_timeframe
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from prices import fetch_prices
 from datetime import date as DateType
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -58,3 +59,13 @@ async def get_average_prices(from_date: DateType = DateType.today(), to_date: Da
 @app.get("/prices/monthly")
 async def get_monthly_price(region: str = "NO5"):
     return get_monthly_averages(region)
+
+@app.get("/claude/ask")
+async def get_claude_answer(question: str):
+    cached_answer = get_cached_answer(question)
+    if cached_answer:
+        return cached_answer
+    else:
+        answer = ask_claude(question)
+        save_answer(question, answer)
+        return answer

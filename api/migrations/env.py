@@ -6,6 +6,8 @@ from sqlalchemy import pool
 from alembic import context
 from dotenv import load_dotenv
 from database import Base
+from db_models import CachedAnswer
+from db_models import PowerPrice
 
 import os
 
