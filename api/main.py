@@ -5,7 +5,7 @@ from prices import get_average_from_db, fetch_prices_from_db, cheapest_date, fet
     fetch_and_save_day, cheapest_timeframe, get_prices_timeperiod, get_monthly_averages, most_expensive_date, \
     most_expensive_timeframe
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from datetime import date as DateType
+from datetime import date as DateType, timedelta
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()

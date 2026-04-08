@@ -48,7 +48,7 @@ async def fetch_and_save_timeframe(from_date: DateType, to_date: DateType):
 
 async def fetch_and_save_day(day=None):
     if day is None:
-        day = DateType.today()
+        day = DateType.today() + timedelta(days=1)
     for region in ["NO1", "NO2", "NO3", "NO4", "NO5"]:
         daily = await fetch_prices(day, region)
         save_prices(daily)
