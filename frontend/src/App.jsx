@@ -8,7 +8,7 @@ function App() {
   return (
     <div>
       <h1>Strømpris</h1>
-        <DayChart />
+        <HistoricalChart />
     </div>
   )
 }

@@ -1,5 +1,7 @@
-from fastapi import FastAPI
-
+from fastapi import FastAPI, Request
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from claude import ask_claude, get_cached_answer, save_answer
 from prices import get_average_from_db, fetch_prices_from_db, cheapest_date, fetch_and_save_timeframe, \
     fetch_and_save_day, cheapest_timeframe, get_prices_timeperiod, get_monthly_averages, most_expensive_date, \
@@ -9,6 +11,9 @@ from datetime import date as DateType, timedelta
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 scheduler = AsyncIOScheduler()
 
@@ -61,7 +66,8 @@ async def get_monthly_price(region: str = "NO1"):
     return get_monthly_averages(region)
 
 @app.get("/claude/ask")
-async def get_claude_answer(question: str, region: str = "NO1"):
+@limiter.limit("5/day")
+async def get_claude_answer(request: Request, question: str, region: str = "NO1"):
     cached_answer = get_cached_answer(question, region)
     if cached_answer:
         return cached_answer
