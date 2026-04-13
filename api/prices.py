@@ -197,7 +197,16 @@ def get_average_from_db(from_date: DateType, to_date: DateType, region: str) -> 
         .filter(PowerPrice.date <= max(from_date, to_date))\
         .scalar()
     db.close()
-    return result
+    return round(result, 2)
+
+def get_average(day: DateType, region: str):
+    db = SessionLocal()
+    result = db.query(func.avg(PowerPrice.price)) \
+        .filter(PowerPrice.region == region) \
+        .filter(PowerPrice.date == day) \
+        .scalar()
+    db.close()
+    return round(result, 2)
 
 def save_prices(daily_prices: DailyPrices):
     region = daily_prices.region
@@ -229,5 +238,5 @@ def get_monthly_averages(region: str):
         .all()
 
     for month, avg_price in result:
-        monthly_averages.append(MonthlyPrices(region=region, month=month, price_nok=avg_price))
+        monthly_averages.append(MonthlyPrices(region=region, month=month, price_nok=round(avg_price, 2)))
     return monthly_averages
