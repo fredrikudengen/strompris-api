@@ -1,5 +1,8 @@
 #!/bin/bash
-until pg_isready -h db -U admin; do
+DB_HOST=$(echo $DATABASE_URL | sed 's/.*@\(.*\):.*/\1/')
+DB_PORT=$(echo $DATABASE_URL | sed 's/.*:\([0-9]*\)\/.*/\1/')
+
+until pg_isready -h $DB_HOST -p $DB_PORT; do
     echo "Venter på databasen..."
     sleep 2
 done
