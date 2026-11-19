@@ -2,18 +2,30 @@ import {useEffect, useState} from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Label } from 'recharts'
 import API_URL from "../api.js";
 
+// Datoer som "YYYY-MM-DD" i lokal tid. toISOString() bruker UTC, som gir
+// gårsdagens dato mellom midnatt og 01/02 norsk tid.
+const toDateStr = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+const addDays = (dateStr, offset) => {
+    const [y, m, d] = dateStr.split('-').map(Number)
+    return toDateStr(new Date(y, m - 1, d + offset))
+}
+
 function DayChart({ date: initialDate, region: initialRegion, children }) {
-    const today = new Date().toISOString().split('T')[0]
+    const today = toDateStr(new Date())
+    const tomorrowStr = addDays(today, 1)
     const [date, setDate] = useState(initialDate ?? today)
     const [region, setRegion] = useState(initialRegion ?? 'NO1')
     const [prices, setPrices] = useState(null)
     const [hasTomorrow, setHasTomorrow] = useState(false)
 
-    const changeDay = (offset) => {
-        const current = new Date(date)
-        current.setDate(current.getDate() + offset)
-        setDate(current.toISOString().split('T')[0])
-    }
+    const changeDay = (offset) => setDate(addDays(date, offset))
+
+    // Neste dag kan vises hvis den er i dag eller tidligere, eller hvis den er
+    // i morgen og morgendagens priser er publisert.
+    const nextDay = addDays(date, 1)
+    const canGoForward = nextDay < tomorrowStr || (nextDay === tomorrowStr && hasTomorrow)
 
     useEffect(() => {
         const fetchPrices = async () => {
@@ -27,21 +39,22 @@ function DayChart({ date: initialDate, region: initialRegion, children }) {
 
     useEffect(() => {
         const checkTomorrow = async () => {
-            const tomorrow = new Date(today)
-            tomorrow.setDate(tomorrow.getDate() + 1)
-            const tomorrowStr = tomorrow.toISOString().split('T')[0]
-            const response = await fetch(`${API_URL}/prices/date?date=${tomorrowStr}&region=${region}`)
-            const data = await response.json()
-            setHasTomorrow(data.prices && data.prices.length > 0)
+            try {
+                const response = await fetch(`${API_URL}/prices/date?date=${tomorrowStr}&region=${region}`)
+                if (!response.ok) {
+                    setHasTomorrow(false)
+                    return
+                }
+                const data = await response.json()
+                setHasTomorrow(Boolean(data.prices && data.prices.length > 0))
+            } catch {
+                setHasTomorrow(false)
+            }
         }
         checkTomorrow()
-    }, [region])
+    }, [region, tomorrowStr])
 
     if (!prices) return <p>Laster...</p>
-
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const tomorrowStr = tomorrow.toISOString().split('T')[0]
 
     return (
         <div className="flex flex-col items-center py-2">
@@ -84,9 +97,9 @@ function DayChart({ date: initialDate, region: initialRegion, children }) {
                 </button>
                 <button
                     onClick={() => changeDay(1)}
-                    disabled={date >= tomorrowStr || !hasTomorrow}
+                    disabled={!canGoForward}
                     className={`px-3 py-1 rounded-lg text-white font-medium
-                        ${date >= tomorrowStr || !hasTomorrow
+                        ${!canGoForward
                             ? 'bg-gray-300 cursor-not-allowed'
                             : 'bg-green-600 hover:bg-green-700'}`}
                 >
