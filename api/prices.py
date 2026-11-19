@@ -18,11 +18,17 @@ async def fetch_prices(day: DateType, region: str) -> DailyPrices:
         response = await client.get(url)
         data = response.json()
 
-    prices = []
+    # Samle priser per time. Dagen sommertiden slutter har to timer kl. 02,
+    # og de slås sammen til ett gjennomsnitt siden hver time lagres én gang.
+    prices_by_hour: dict[int, list[float]] = {}
     for item in data:
         hour = datetime.fromisoformat(item.get("time_start")).hour
-        price = item.get("NOK_per_kWh")
-        prices.append(HourlyPrice(hour=hour, price_nok=price))
+        prices_by_hour.setdefault(hour, []).append(item.get("NOK_per_kWh"))
+
+    prices = [
+        HourlyPrice(hour=hour, price_nok=sum(values) / len(values))
+        for hour, values in sorted(prices_by_hour.items())
+    ]
 
     return DailyPrices(
         region=region,
