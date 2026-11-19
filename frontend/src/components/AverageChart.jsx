@@ -26,7 +26,7 @@ function AverageChart() {
                 setAverage(data)
             }
             else {
-                const response = await fetch(`${API_URL}/prices/average?from_date=${fromDate}&to_date=${toDate}&region=${region}`)
+                const response = await fetch(`${API_URL}/prices/average-period?from_date=${fromDate}&to_date=${toDate}&region=${region}`)
                 const data = await response.json()
                 setAverage(data)
             }

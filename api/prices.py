@@ -5,7 +5,7 @@ from fastapi import HTTPException
 
 from database import SessionLocal
 from db_models import PowerPrice
-from models import HourlyPrice, DailyPrices, MonthlyPrices
+from models import HourlyPrice, DailyPrices, MonthlyPrices, REGIONS
 from datetime import timedelta
 from datetime import date as DateType
 from sqlalchemy.dialects.postgresql import insert
@@ -32,7 +32,7 @@ async def fetch_prices(day: DateType, region: str) -> DailyPrices:
 
 async def fetch_and_save_timeframe(from_date: DateType, to_date: DateType):
     start_date = from_date
-    for region in ["NO1", "NO2", "NO3", "NO4", "NO5"]:
+    for region in REGIONS:
         if from_date <= to_date:
             while from_date <= to_date:
                 daily = await fetch_prices(from_date, region)
@@ -49,7 +49,7 @@ async def fetch_and_save_timeframe(from_date: DateType, to_date: DateType):
 async def fetch_and_save_day(day=None):
     if day is None:
         day = DateType.today() + timedelta(days=1)
-    for region in ["NO1", "NO2", "NO3", "NO4", "NO5"]:
+    for region in REGIONS:
         daily = await fetch_prices(day, region)
         save_prices(daily)
 
@@ -98,11 +98,6 @@ def most_expensive(daily_prices: DailyPrices):
     return max(prices, key=lambda x: x.price_nok)
 
 async def cheapest_timeframe(from_date: DateType, to_date: DateType, region: str):
-    if from_date == DateType.today():
-        await fetch_and_save_day(from_date)
-    elif to_date == DateType.today():
-        await fetch_and_save_day(to_date)
-
     cheapest_so_far = 10000000000.0
     cheapest_day = None
     if from_date <= to_date:
@@ -158,11 +153,6 @@ async def most_expensive_date(day: DateType, region: str):
     return most_expensive(daily)
 
 async def most_expensive_timeframe(from_date: DateType, to_date: DateType, region: str):
-    if from_date == DateType.today():
-        await fetch_and_save_day(from_date)
-    elif to_date == DateType.today():
-        await fetch_and_save_day(to_date)
-
     most_expensive_so_far = 0.0
     most_expensive_day = None
     if from_date <= to_date:
@@ -197,6 +187,8 @@ def get_average_from_db(from_date: DateType, to_date: DateType, region: str) -> 
         .filter(PowerPrice.date <= max(from_date, to_date))\
         .scalar()
     db.close()
+    if result is None:
+        return None
     return round(result, 2)
 
 def get_average(day: DateType, region: str):
@@ -206,6 +198,8 @@ def get_average(day: DateType, region: str):
         .filter(PowerPrice.date == day) \
         .scalar()
     db.close()
+    if result is None:
+        return None
     return round(result, 2)
 
 def save_prices(daily_prices: DailyPrices):

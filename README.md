@@ -33,7 +33,10 @@ En fullstack-applikasjon som visualiserer norske strømpriser i sanntid.
 ```
 
 2. Lag en `.env`-fil i rotmappen:
+```
 ANTHROPIC_API_KEY=din_nøkkel_her
+ADMIN_TOKEN=lang-tilfeldig-hemmelighet
+```
 
 3. Start applikasjonen:
 ```bash
@@ -42,8 +45,10 @@ ANTHROPIC_API_KEY=din_nøkkel_her
 
 4. Åpne [http://localhost:3000](http://localhost:3000) i nettleseren
 
-5. Hent inn prisdata:
-http://localhost:8000/admin/fetch-date?from_date=2021-10-01&to_date=2026-04-13
+5. Hent inn prisdata (krever `ADMIN_TOKEN` fra `.env`):
+```bash
+   curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://localhost:8000/admin/fetch-date?from_date=2021-10-01&to_date=2026-04-13"
+```
 
 ## Datakilde
 Strømpriser hentes fra [hvakosterstrommen.no](https://www.hvakosterstrommen.no/strompris-api)

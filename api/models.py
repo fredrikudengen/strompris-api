@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Literal, get_args
 from datetime import date as DateType, datetime
 
 
@@ -17,3 +17,6 @@ class MonthlyPrices(BaseModel):
     month: datetime
     price_nok: float
 
+
+Region = Literal["NO1", "NO2", "NO3", "NO4", "NO5"]
+REGIONS: list[str] = list(get_args(Region))
